@@ -3,11 +3,14 @@ package org.kayteam.backend.apirest.models.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.Serializable;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 
 @Entity
@@ -35,14 +38,26 @@ public class Cliente implements Serializable {
     @Getter
     @Setter
     private String email;
+    @NotNull
     @Column(name = "create_at")
     @Temporal(TemporalType.DATE)
     @Getter
     @Setter
     private Date createAt;
+    @Getter
+    @Setter
+    private String foto;
 
     @PrePersist
-    public void prePersist(){
+    public void prePersist() {
         createAt = new Date();
+    }
+
+    @PreRemove
+    public void preRemove(){
+        Path uploads = Paths.get("uploads");
+        if(getFoto() != null && !getFoto().equals("")) {
+            uploads.resolve(getFoto()).toFile().delete();
+        }
     }
 }

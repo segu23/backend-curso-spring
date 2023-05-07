@@ -1,20 +1,29 @@
 package org.kayteam.backend.apirest.models.controllers;
 
 import jakarta.validation.Valid;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.kayteam.backend.apirest.models.entity.Cliente;
 import org.kayteam.backend.apirest.models.services.IClienteService;
+import org.kayteam.backend.apirest.models.services.IUploadFileService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @CrossOrigin(origins = {"http://localhost:4200"})
@@ -24,6 +33,8 @@ public class ClienteRestController {
 
     @Autowired
     private IClienteService clienteService;
+    @Autowired
+    private IUploadFileService uploadFileService;
 
     @GetMapping("/clientes")
     public List<Cliente> index() {
@@ -146,5 +157,69 @@ public class ClienteRestController {
         response.put("mensaje", "¡!El cliente ha sido eliminado con éxito");
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/clientes/upload")
+    public ResponseEntity<?> upload(@RequestParam("archivo") MultipartFile archivo, @RequestParam("id") Long id) {
+        Map<String, Object> response = new HashMap<>();
+        Cliente cliente = clienteService.findById(id);
+
+        String fileName;
+
+        if (!archivo.isEmpty()) {
+            try {
+                String[] originalFileName = Objects.requireNonNull(archivo.getOriginalFilename()).split("\\.");
+                fileName = "profiles/pp_" + id + "." + originalFileName[originalFileName.length - 1];
+                uploadFileService.saveFile(archivo, fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+                response.put("mensaje", "Se ha producido un error al guardar la imágen.");
+                response.put("error", e.getMessage());
+                return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            uploadFileService.deleteFile(cliente.getFoto());
+
+            cliente.setFoto(fileName);
+            clienteService.save(cliente);
+
+            response.put("cliente", cliente);
+            response.put("mensaje", "La imágen fue subida correctamente.");
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @ResponseBody
+    @GetMapping(value = "/uploads/pp/{id}", produces = MediaType.IMAGE_JPEG_VALUE)
+    public byte[] getProfilePhoto(@PathVariable Long id) {
+        Cliente cliente = clienteService.findById(id);
+        Resource photo = null;
+
+        Map<String, Object> response = new HashMap<>();
+
+        if(cliente != null){
+            try {
+                photo = uploadFileService.loadFile(cliente.getFoto());
+            } catch (MalformedURLException e) {
+                try {
+                    photo = uploadFileService.loadFile("profiles/no-pp.png");
+                } catch (MalformedURLException ex) {
+                }
+            }
+        }else{
+            try {
+                photo = uploadFileService.loadFile("profiles/no-pp.png");
+            } catch (MalformedURLException ex) {
+            }
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + photo.getFilename());
+        try{
+            return photo.getContentAsByteArray();
+        }catch (IOException e){
+        }
+        return null;
     }
 }

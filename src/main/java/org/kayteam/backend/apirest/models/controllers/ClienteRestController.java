@@ -1,7 +1,5 @@
 package org.kayteam.backend.apirest.models.controllers;
 
-import jakarta.validation.Valid;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.kayteam.backend.apirest.models.entity.Cliente;
 import org.kayteam.backend.apirest.models.services.IClienteService;
 import org.kayteam.backend.apirest.models.services.IUploadFileService;
@@ -14,10 +12,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.Valid;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.HashMap;
@@ -198,7 +198,7 @@ public class ClienteRestController {
 
         Map<String, Object> response = new HashMap<>();
 
-        if(cliente != null){
+        if (cliente != null) {
             try {
                 photo = uploadFileService.loadFile(cliente.getFoto());
             } catch (MalformedURLException e) {
@@ -207,7 +207,7 @@ public class ClienteRestController {
                 } catch (MalformedURLException ex) {
                 }
             }
-        }else{
+        } else {
             try {
                 photo = uploadFileService.loadFile("profiles/no-pp.png");
             } catch (MalformedURLException ex) {
@@ -216,9 +216,9 @@ public class ClienteRestController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + photo.getFilename());
-        try{
-            return photo.getContentAsByteArray();
-        }catch (IOException e){
+        try {
+            return photo.getInputStream().readAllBytes();
+        } catch (IOException e) {
         }
         return null;
     }

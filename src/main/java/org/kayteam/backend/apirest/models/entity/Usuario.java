@@ -1,11 +1,12 @@
 package org.kayteam.backend.apirest.models.entity;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
@@ -31,11 +32,8 @@ public class Usuario implements Serializable, UserDetails {
     @Getter
     @Setter
     private Boolean enabled;
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinTable(name = "usuarios_roles",
-            joinColumns = @JoinColumn(table = "usuario_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"),
-            uniqueConstraints = {@UniqueConstraint(columnNames = {"usuario_id", "role_id"})})
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "usuario")
+    @JsonIgnore
     @Getter
     @Setter
     private List<Role> roles;
